@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="营养扫码">
+<meta name="theme-color" content="#16a34a">
+<title>营养扫码 · 查蛋白质/脂肪/配料</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='36' fill='%2316a34a'/%3E%3Cg fill='white'%3E%3Crect x='35' y='45' width='8' height='90'/%3E%3Crect x='52' y='45' width='4' height='90'/%3E%3Crect x='64' y='45' width='12' height='90'/%3E%3Crect x='84' y='45' width='4' height='90'/%3E%3Crect x='96' y='45' width='8' height='90'/%3E%3Crect x='112' y='45' width='4' height='90'/%3E%3Crect x='124' y='45' width='12' height='90'/%3E%3Crect x='142' y='45' width='4' height='90'/%3E%3C/g%3E%3C/svg%3E">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{--g:#16a34a;--gd:#15803d;--bg:#f4f6f5;--card:#fff;--t:#1f2937;--m:#6b7280;--b:#e5e7eb}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--t);-webkit-text-size-adjust:100%}
+header{background:var(--g);color:#fff;padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:19px}
+header p{margin:2px 0 0;font-size:12px;opacity:.85}
+main{max-width:560px;margin:0 auto;padding:12px 12px calc(env(safe-area-inset-bottom) + 24px)}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn-p{background:var(--g);color:#fff}.btn-p:active{background:var(--gd)}
+.btn-s{background:#ecfdf5;color:var(--gd)}
+.btn-d{background:#fee2e2;color:#b91c1c}
+.row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
+#reader{width:100%;border-radius:12px;overflow:hidden;background:#000;display:none;margin-top:10px}
+#reader video{width:100%!important;object-fit:cover}
+.manual{display:flex;gap:8px;margin-top:10px}
+.manual input{flex:1;min-width:0;font-size:17px;padding:12px;border:1px solid var(--b);border-radius:12px;letter-spacing:1px}
+.manual button{width:auto;padding:12px 18px}
+.hint{font-size:12px;color:var(--m);margin-top:8px;line-height:1.5}
+.status{padding:12px;border-radius:12px;font-size:14px;margin-bottom:12px;line-height:1.5}
+.status.info{background:#eff6ff;color:#1d4ed8}.status.err{background:#fef2f2;color:#b91c1c}.status.warn{background:#fffbeb;color:#92400e}
+.status a{color:inherit;font-weight:600}
+.prod{display:flex;gap:12px;align-items:flex-start}
+.prod img{width:92px;height:92px;object-fit:contain;border-radius:10px;background:#f9fafb;border:1px solid var(--b);flex-shrink:0}
+.prod h2{margin:0 0 4px;font-size:18px;line-height:1.3}
+.prod .brand{color:var(--m);font-size:14px}
+.prod .code{color:var(--m);font-size:12px;margin-top:4px}
+.big{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.big div{background:#f0fdf4;border-radius:12px;padding:10px 6px;text-align:center}
+.big .v{font-size:22px;font-weight:700;color:var(--gd)}
+.big .l{font-size:12px;color:var(--m)}
+h3{font-size:15px;margin:0 0 8px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 4px;border-bottom:1px solid var(--b);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--m);font-weight:500;font-size:12px}
+tr.hl td{font-weight:700;color:var(--gd)}
+td.sub{padding-left:16px;color:var(--m)}
+.ing{font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.lang{display:inline-block;font-size:11px;background:#f3f4f6;color:var(--m);padding:1px 6px;border-radius:6px;margin-left:6px;font-weight:400}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:13px;padding:4px 10px;border-radius:999px;background:#fef3c7;color:#92400e}
+.tag.add{background:#f3f4f6;color:#374151}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b);cursor:pointer}
+.hist li:last-child{border-bottom:0}
+.hist img{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#f9fafb}
+.hist .n{font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist .c{font-size:11px;color:var(--m)}
+.foot{font-size:11px;color:var(--m);text-align:center;margin-top:16px;line-height:1.6}
+.foot a{color:var(--m)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛒 营养扫码</h1>
+  <p>扫描商品条形码，查看蛋白质、脂肪和配料</p>
+</header>
+<main>
+  <section class="card">
+    <button id="btnScan" class="btn btn-p">📷 打开相机扫码</button>
+    <button id="btnStop" class="btn btn-d hidden" style="margin-top:8px">停止扫码</button>
+    <div id="reader"></div>
+    <div class="row">
+      <label class="btn btn-s" for="fileInput">🖼️ 拍照/上传条码图片</label>
+    </div>
+    <input id="fileInput" type="file" accept="image/*" capture="environment" class="hidden">
+    <form class="manual" id="manualForm">
+      <input id="codeInput" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="或手动输入条码数字" autocomplete="off">
+      <button class="btn btn-p" type="submit">查询</button>
+    </form>
+    <div class="hint">支持 UPC / EAN 商品条形码（加拿大超市商品通常为 12 位 UPC），以及包含条码数字或商品链接的二维码。对准条码横向放置，保持光线充足。</div>
+  </section>
+
+  <div id="status" class="status hidden"></div>
+  <div id="result"></div>
+
+  <section class="card" id="histCard">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 style="margin:0">最近扫描</h3>
+      <button id="btnClearHist" style="border:0;background:none;color:var(--m);font-size:13px">清空</button>
+    </div>
+    <ul class="hist" id="hist"></ul>
+  </section>
+
+  <div class="foot">数据来自 <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a>（开放食品数据库，由用户共同维护），仅供参考，请以包装标签为准。<br>提示：在 Safari 中点“分享 → 添加到主屏幕”，可像 App 一样使用。</div>
+</main>
+
+<script>
+"use strict";
+const API = "https://world.openfoodfacts.org/api/v2/product/";
+const FIELDS = ["code","product_name","product_name_zh","product_name_en","product_name_fr","generic_name","brands","quantity","serving_size",
+  "image_front_url","image_front_small_url","image_url","ingredients_text","ingredients_text_zh","ingredients_text_en","ingredients_text_fr",
+  "allergens_tags","traces_tags","additives_tags","nutriments","lang"].join(",");
+const HKEY = "nutriScanHistory";
+const $ = id => document.getElementById(id);
+
+// ---------- helpers (pure, testable) ----------
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+// Expand UPC-E (8 digits, number system 0/1) to UPC-A
+function upcEtoA(e){
+  if(!/^[01]\d{7}$/.test(e)) return null;
+  const ns=e[0], d=e.slice(1,7), chk=e[7]; let m;
+  const x=d[5];
+  if(x<="2") m=d[0]+d[1]+x+"0000"+d[2]+d[3]+d[4];
+  else if(x==="3") m=d[0]+d[1]+d[2]+"00000"+d[3]+d[4];
+  else if(x==="4") m=d[0]+d[1]+d[2]+d[3]+"00000"+d[4];
+  else m=d[0]+d[1]+d[2]+d[3]+d[4]+"0000"+x;
+  return ns+m+chk;
+}
+
+// Turn any scanned text (barcode digits, QR text, URL) into a barcode number or null
+function extractCode(text){
+  if(!text) return null;
+  const t=String(text).trim();
+  const digitsOnly=t.replace(/[\s-]/g,"");
+  if(/^\d{6,14}$/.test(digitsOnly)) return digitsOnly;
+  // URL forms: openfoodfacts .../product/0123..., GS1 Digital Link .../01/00012345678905
+  let m=t.match(/\/product\/(\d{6,14})/i) || t.match(/\/01\/(\d{8,14})/) || t.match(/[?&](?:gtin|upc|ean|barcode|code)=(\d{6,14})/i);
+  if(m) return m[1];
+  m=t.match(/(?:^|\D)(\d{8}|\d{12,14})(?:\D|$)/);
+  return m?m[1]:null;
+}
+
+// Candidate codes to try in order
+function candidates(code){
+  const out=[];const add=c=>{if(c&&!out.includes(c))out.push(c);};
+  add(code);
+  if(code.length===8){const a=upcEtoA(code); if(a){add(a);add("0"+a);}}
+  if(code.length===12) add("0"+code);
+  if(code.length===13 && code[0]==="0") add(code.slice(1));
+  if(code.length===14 && code[0]==="0") add(code.slice(1));
+  return out;
+}
+
+function pickLang(p,base){
+  const order=[["zh","中文"],["en","英文"],["fr","法文"]];
+  for(const [l,name] of order){const v=p[base+"_"+l]; if(v&&v.trim()) return {text:v.trim(),lang:name};}
+  if(p[base]&&p[base].trim()) return {text:p[base].trim(),lang:""};
+  return null;
+}
+
+const TAGZH={"en:gluten":"麸质","en:milk":"牛奶","en:eggs":"鸡蛋","en:nuts":"坚果","en:peanuts":"花生","en:soybeans":"大豆","en:fish":"鱼",
+ "en:crustaceans":"甲壳类","en:molluscs":"软体动物","en:sesame-seeds":"芝麻","en:mustard":"芥末","en:celery":"芹菜","en:lupin":"羽扇豆",
+ "en:sulphur-dioxide-and-sulphites":"二氧化硫/亚硫酸盐","en:wheat":"小麦"};
+function tagName(t){
+  if(TAGZH[t]) return TAGZH[t];
+  const s=String(t).replace(/^[a-z]{2}:/,"").replace(/-/g," ");
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+
+function fmt(v,dec){
+  if(v===undefined||v===null||v===""||isNaN(Number(v))) return null;
+  const n=Number(v);
+  const d=dec!=null?dec:(Math.abs(n)>=100?0:Math.abs(n)>=10?1:Math.abs(n)>=1?1:2);
+  return String(Number(n.toFixed(d)));
+}
+
+const NUTRIENTS=[
+  {k:"energy-kcal",l:"热量",u:"kcal",dec:0},
+  {k:"proteins",l:"蛋白质",u:"g",hl:true},
+  {k:"fat",l:"脂肪",u:"g",hl:true},
+  {k:"saturated-fat",l:"饱和脂肪",u:"g",sub:true},
+  {k:"trans-fat",l:"反式脂肪",u:"g",sub:true},
+  {k:"carbohydrates",l:"碳水化合物",u:"g"},
+  {k:"sugars",l:"糖",u:"g",sub:true},
+  {k:"fiber",l:"膳食纤维",u:"g",sub:true},
+  {k:"sodium",l:"钠",u:"mg",mul:1000,dec:0},
+  {k:"salt",l:"盐",u:"g"},
+];
+function nutVal(n,key,suffix,mul){
+  let v=n[key+suffix];
+  if(key==="energy-kcal"&&(v==null)){const kj=n["energy-kj"+suffix]??n["energy"+suffix]; if(kj!=null) v=Number(kj)/4.184;}
+  if(v==null) return null;
+  return Number(v)*(mul||1);
+}
+
+function renderProduct(p){
+  const n=p.nutriments||{};
+  const name=p.product_name_zh||p.product_name||p.product_name_en||p.product_name_fr||p.generic_name||"（未命名商品）";
+  const img=p.image_front_url||p.image_url||p.image_front_small_url||"";
+  const hasServ=NUTRIENTS.some(x=>nutVal(n,x.k,"_serving",x.mul)!=null);
+  const big=k=>{const x=NUTRIENTS.find(y=>y.k===k);const v=fmt(nutVal(n,k,"_100g",x.mul),x.dec);return v==null?"—":v+(x.u==="kcal"?"":" "+x.u);};
+  let rows="";let any=false;
+  for(const x of NUTRIENTS){
+    const a=fmt(nutVal(n,x.k,"_100g",x.mul),x.dec), b=fmt(nutVal(n,x.k,"_serving",x.mul),x.dec);
+    if(a==null&&b==null) continue; any=true;
+    rows+=`<tr class="${x.hl?"hl":""}"><td class="${x.sub?"sub":""}">${x.l}</td><td>${a==null?"—":a+" "+x.u}</td>${hasServ?`<td>${b==null?"—":b+" "+x.u}</td>`:""}</tr>`;
+  }
+  const ing=pickLang(p,"ingredients_text");
+  const okTag=t=>/^[a-z]{2}:[a-z0-9-]+$/.test(t);
+  const allergens=[...new Set((p.allergens_tags||[]).filter(okTag).map(tagName))];
+  const traces=[...new Set((p.traces_tags||[]).filter(okTag).map(tagName))];
+  const additives=(p.additives_tags||[]).map(t=>String(t).replace(/^[a-z]{2}:/,"").toUpperCase());
+  const offUrl="https://world.openfoodfacts.org/product/"+encodeURIComponent(p.code);
+  return `
+  <section class="card">
+    <div class="prod">
+      ${img?`<img src="${esc(img)}" alt="商品图片" loading="lazy">`:""}
+      <div>
+        <h2>${esc(name)}</h2>
+        ${p.brands?`<div class="brand">${esc(p.brands)}</div>`:""}
+        <div class="code">条码 ${esc(p.code)}${p.quantity?" · "+esc(p.quantity):""}</div>
+      </div>
+    </div>
+    <div class="big">
+      <div><div class="v" id="bigProtein">${big("proteins")}</div><div class="l">蛋白质 /100g</div></div>
+      <div><div class="v" id="bigFat">${big("fat")}</div><div class="l">脂肪 /100g</div></div>
+      <div><div class="v">${big("energy-kcal")}</div><div class="l">千卡 /100g</div></div>
+    </div>
+  </section>
+  <section class="card">
+    <h3>营养成分</h3>
+    ${any?`<table><thead><tr><th>项目</th><th>每100g</th>${hasServ?`<th>每份${p.serving_size?"<br>("+esc(p.serving_size)+")":""}</th>`:""}</tr></thead><tbody>${rows}</tbody></table>`
+      :`<div class="hint">数据库中暂无该商品的营养数据。</div>`}
+  </section>
+  <section class="card">
+    <h3>配料 / 成分${ing&&ing.lang?`<span class="lang">${ing.lang}</span>`:""}</h3>
+    <div class="ing" id="ingText">${ing?esc(ing.text.replace(/_/g,"")):'<span class="hint">数据库中暂无配料信息。</span>'}</div>
+  </section>
+  ${allergens.length||traces.length?`<section class="card"><h3>⚠️ 过敏原</h3><div class="tags">${allergens.map(a=>`<span class="tag">${esc(a)}</span>`).join("")}</div>
+    ${traces.length?`<div class="hint">可能含有微量：${traces.map(esc).join("、")}</div>`:""}</section>`:""}
+  ${additives.length?`<section class="card"><h3>食品添加剂</h3><div class="tags">${additives.map(a=>`<span class="tag add">${esc(a)}</span>`).join("")}</div></section>`:""}
+  <div class="foot"><a href="${offUrl}" target="_blank" rel="noopener">在 Open Food Facts 查看/修正此商品 ›</a></div>`;
+}
+
+// ---------- UI ----------
+function setStatus(html,type){const s=$("status");if(!html){s.classList.add("hidden");s.innerHTML="";return;}s.className="status "+(type||"info");s.innerHTML=html;}
+
+async function fetchProduct(code){
+  for(const c of candidates(code)){
+    const r=await fetch(API+encodeURIComponent(c)+".json?fields="+FIELDS);
+    if(r.status===404) continue;
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    if(j.status===1&&j.product){j.product.code=j.product.code||c;return j.product;}
+  }
+  return null;
+}
+
+let busy=false;
+async function lookup(raw){
+  const code=extractCode(raw);
+  $("result").innerHTML="";
+  if(!code){
+    const isUrl=/^https?:\/\//i.test(String(raw||"").trim());
+    setStatus(isUrl?`这个二维码是一个网址，没有包含商品条码：<br><a href="${esc(raw)}" target="_blank" rel="noopener">${esc(raw)}</a><br>请改扫商品包装上的条形码。`
+      :`无法识别条码内容：${esc(raw)}`,"warn");
+    return;
+  }
+  if(busy) return; busy=true;
+  $("codeInput").value=code;
+  setStatus("正在查询条码 <b>"+esc(code)+"</b> …","info");
+  try{
+    const p=await fetchProduct(code);
+    if(!p){
+      setStatus(`未在 Open Food Facts 数据库中找到条码 <b>${esc(code)}</b> 的商品。<br>可以帮忙<a href="https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${encodeURIComponent(code)}" target="_blank" rel="noopener">添加这个商品</a>（需注册），或下载官方 Open Food Facts App 拍照添加。`,"err");
+      return;
+    }
+    setStatus("");
+    $("result").innerHTML=renderProduct(p);
+    saveHistory(p);
+    $("result").scrollIntoView({behavior:"smooth",block:"start"});
+  }catch(e){
+    setStatus("网络错误，请检查网络后重试。（"+esc(e.message)+"）","err");
+  }finally{busy=false;}
+}
+
+// history
+function loadHistory(){try{return JSON.parse(localStorage.getItem(HKEY))||[];}catch(e){return[];}}
+function saveHistory(p){
+  const h=loadHistory().filter(x=>x.code!==p.code);
+  h.unshift({code:p.code,name:p.product_name_zh||p.product_name||p.product_name_en||p.product_name_fr||"（未命名商品）",brand:p.brands||"",img:p.image_front_small_url||p.image_front_url||"",t:Date.now()});
+  try{localStorage.setItem(HKEY,JSON.stringify(h.slice(0,20)));}catch(e){}
+  renderHistory();
+}
+function renderHistory(){
+  const h=loadHistory();
+  $("histCard").classList.toggle("hidden",!h.length);
+  $("hist").innerHTML=h.map(x=>`<li data-code="${esc(x.code)}">${x.img?`<img src="${esc(x.img)}" alt="">`:`<span style="width:40px;text-align:center">📦</span>`}<div style="min-width:0;flex:1"><div class="n">${esc(x.name)}</div><div class="c">${esc(x.brand)} · ${esc(x.code)}</div></div><span style="color:#9ca3af">›</span></li>`).join("");
+}
+$("hist").addEventListener("click",e=>{const li=e.target.closest("li");if(li)lookup(li.dataset.code);});
+$("btnClearHist").onclick=()=>{localStorage.removeItem(HKEY);renderHistory();};
+
+// manual
+$("manualForm").addEventListener("submit",e=>{e.preventDefault();const v=$("codeInput").value.trim();if(v){$("codeInput").blur();lookup(v);}});
+
+// scanning
+let scanner=null, lastCode=null;
+function formats(){
+  if(!window.Html5QrcodeSupportedFormats) return undefined;
+  const F=Html5QrcodeSupportedFormats;
+  return [F.EAN_13,F.UPC_A,F.UPC_E,F.EAN_8,F.QR_CODE,F.CODE_128];
+}
+async function startScan(){
+  if(!window.Html5Qrcode){setStatus("扫码组件加载失败，请检查网络后刷新页面，或手动输入条码。","err");return;}
+  if(!window.isSecureContext){setStatus("相机需要 HTTPS 链接才能使用。请手动输入条码或上传图片。","warn");}
+  $("reader").style.display="block";
+  $("btnScan").classList.add("hidden");$("btnStop").classList.remove("hidden");
+  setStatus("请将条形码对准取景框…","info");
+  scanner=new Html5Qrcode("reader",{formatsToSupport:formats(),verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
+  try{
+    await scanner.start({facingMode:"environment"},
+      {fps:12,qrbox:(w,h)=>{const W=Math.floor(Math.min(w*0.9,360));return {width:W,height:Math.floor(Math.min(h*0.6,W*0.6))};},aspectRatio:1.333,
+       videoConstraints:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}}},
+      async txt=>{ if(txt===lastCode&&busy) return; lastCode=txt; if(navigator.vibrate)navigator.vibrate(80); await stopScan(); lookup(txt); },
+      ()=>{});
+    // iOS: ensure inline playback
+    const v=document.querySelector("#reader video"); if(v){v.setAttribute("playsinline","");v.setAttribute("webkit-playsinline","");v.muted=true;}
+  }catch(e){
+    await stopScan();
+    const msg=String(e&&e.message||e);
+    setStatus(/NotAllowed|Permission/i.test(msg)?"无法使用相机：请在浏览器设置中允许本网站访问相机（iPhone：设置 → Safari → 相机 → 允许），或改用拍照/手动输入。"
+      :"无法打开相机："+esc(msg)+"<br>请改用“拍照/上传条码图片”或手动输入。","err");
+  }
+}
+async function stopScan(){
+  if(scanner){try{if(scanner.isScanning)await scanner.stop();scanner.clear();}catch(e){} scanner=null;}
+  $("reader").style.display="none";$("reader").innerHTML="";
+  $("btnScan").classList.remove("hidden");$("btnStop").classList.add("hidden");
+}
+$("btnScan").onclick=startScan;
+$("btnStop").onclick=()=>{stopScan();setStatus("");};
+
+// photo
+$("fileInput").addEventListener("change",async e=>{
+  const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
+  if(!window.Html5Qrcode){setStatus("扫码组件加载失败，请手动输入条码。","err");return;}
+  await stopScan();
+  setStatus("正在识别图片中的条码…","info");
+  let tmp=document.getElementById("fileReader"); if(!tmp){tmp=document.createElement("div");tmp.id="fileReader";tmp.className="hidden";document.body.appendChild(tmp);}
+  const s=new Html5Qrcode("fileReader",{formatsToSupport:formats(),verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
+  try{const txt=await s.scanFile(f,false);lookup(txt);}
+  catch(err){setStatus("没能在图片中识别出条码。请靠近一些、让条码清晰且横向占满画面后重拍，或手动输入条码下方的数字。","warn");}
+  finally{try{s.clear();}catch(_){}}
+});
+
+renderHistory();
+// deep link: ?code=xxxx
+const q=new URLSearchParams(location.search).get("code"); if(q) lookup(q);
+</script>
+</body>
+</html>
